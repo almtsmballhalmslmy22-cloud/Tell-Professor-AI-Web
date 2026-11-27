@@ -12,7 +12,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDWXpZ2nxJpJ81sQCiiM6bO2SfkBp2zi5M",
   authDomain: "tell-professor-ai-ac46e.firebaseapp.com",
   projectId: "tell-professor-ai-ac46e",
-  appId: "ضع_FIREBASE_APP_ID_الحالي"
+  appId: "1:428530460091:web:8c84e71fec9dbd94a9909e"
 };
 
 const API_URL = "https://script.google.com/macros/s/AKfycbwmMbFGsPGHX2BvR_HN77rYLjxO1tEPUYxeYy3VxOZa6agsrZ7eowRF4Y6892iFKx5ftg/exec";
