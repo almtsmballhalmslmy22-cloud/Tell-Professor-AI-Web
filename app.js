@@ -299,3 +299,5 @@ const footer = document.querySelector("footer");
 if (footer) {
   footer.textContent = "Powered by Professor المعتصم بالله المسلمي";
 }
+setupTools();
+setupImageUpload();
