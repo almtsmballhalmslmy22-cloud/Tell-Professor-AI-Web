@@ -14,7 +14,7 @@ import {
 // 1. إعدادات الاتصال
 // ==========================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyF5JihmoxmYeYD2v2lzA4cvPdbkPYCc35QziISCveazCN4ScBMFJ-e0Dl6gifWtoTf5w/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwmMbFGsPGHX2BvR_HN77rYLjxO1tEPUYxeYy3VxOZa6agsrZ7eowRF4Y6892iFKx5ftg/exec";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDWXpZ2nxJpJ81sQCiiM6bO2SfkBp2zi5M",
