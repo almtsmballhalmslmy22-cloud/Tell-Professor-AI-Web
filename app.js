@@ -9,7 +9,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "ضع_FIREBASE_API_KEY_الحالي",
+  apiKey: "AIzaSyDWXpZ2nxJpJ81sQCiiM6bO2SfkBp2zi5M",
   authDomain: "tell-professor-ai-ac46e.firebaseapp.com",
   projectId: "tell-professor-ai-ac46e",
   appId: "ضع_FIREBASE_APP_ID_الحالي"
