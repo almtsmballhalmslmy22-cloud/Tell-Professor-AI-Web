@@ -33,7 +33,7 @@ const auth = getAuth(firebaseApp);
 // 2. عناصر الصفحة
 // ==========================================
 
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
 const messages = $("messages");
 const welcome = $("welcome");
@@ -50,9 +50,44 @@ let selectedImage = null;
 let isSending = false;
 let isRegisterMode = false;
 let toastTimeout = null;
+let subscriptionInfo = null;
 
 // ==========================================
-// 3. رسائل التنبيه
+// 3. طلبات السيرفر
+// ==========================================
+
+async function apiRequest(data) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(data)
+  });
+
+  if (!response.ok) {
+    throw new Error("تعذر الاتصال بالسيرفر.");
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.error || "حدث خطأ في الطلب.");
+  }
+
+  return result;
+}
+
+async function getToken() {
+  if (!currentUser) {
+    throw new Error("سجّل الدخول أولًا.");
+  }
+
+  return await currentUser.getIdToken();
+}
+
+// ==========================================
+// 4. رسائل التنبيه
 // ==========================================
 
 function showToast(message) {
@@ -60,13 +95,14 @@ function showToast(message) {
   toast.classList.add("show");
 
   clearTimeout(toastTimeout);
+
   toastTimeout = setTimeout(() => {
     toast.classList.remove("show");
   }, 3500);
 }
 
 // ==========================================
-// 4. أدوات المحادثة
+// 5. أدوات المحادثة
 // ==========================================
 
 const toolNames = {
@@ -112,7 +148,7 @@ document.querySelectorAll(".tool").forEach(button => {
 });
 
 // ==========================================
-// 5. إظهار وإخفاء نافذة الحساب
+// 6. الحساب
 // ==========================================
 
 function openAuth() {
@@ -140,7 +176,7 @@ $("accountButton").addEventListener("click", () => {
 $("closeAuth").addEventListener("click", closeAuth);
 
 // ==========================================
-// 6. تسجيل الدخول وإنشاء الحساب
+// 7. تسجيل الدخول وإنشاء الحساب
 // ==========================================
 
 function setAuthMessage(message, isError = true) {
@@ -164,7 +200,9 @@ $("toggleAuth").addEventListener("click", () => {
     isRegisterMode ? "إنشاء الحساب" : "دخول";
 
   $("toggleAuth").textContent =
-    isRegisterMode ? "لديك حساب بالفعل؟ تسجيل الدخول" : "إنشاء حساب جديد";
+    isRegisterMode
+      ? "لديك حساب بالفعل؟ تسجيل الدخول"
+      : "إنشاء حساب جديد";
 
   setAuthMessage("");
 });
@@ -212,7 +250,7 @@ $("authForm").addEventListener("submit", async event => {
 });
 
 // ==========================================
-// 7. استعادة كلمة المرور
+// 8. استعادة كلمة المرور
 // ==========================================
 
 $("forgotPassword").addEventListener("click", async () => {
@@ -232,17 +270,46 @@ $("forgotPassword").addEventListener("click", async () => {
 });
 
 // ==========================================
-// 8. متابعة حالة الحساب
+// 9. تحديث معلومات الحساب والاشتراك
 // ==========================================
 
-onAuthStateChanged(auth, user => {
+async function refreshSubscriptionInfo() {
+  if (!currentUser) return;
+
+  try {
+    const idToken = await getToken();
+
+    subscriptionInfo = await apiRequest({
+      action: "subscriptionInfo",
+      idToken: idToken
+    });
+
+    const membership = subscriptionInfo.membership;
+
+    if (membership && membership.active) {
+      $("planLabel").textContent = "Professor Plus";
+    } else {
+      $("planLabel").textContent = "حساب مجاني";
+    }
+
+  } catch (error) {
+    console.error("Subscription info:", error);
+    $("planLabel").textContent = "حساب مجاني";
+  }
+}
+
+onAuthStateChanged(auth, async user => {
   currentUser = user;
+  subscriptionInfo = null;
 
   if (user) {
     $("accountLabel").textContent = user.email || "مستخدم";
-    $("planLabel").textContent = "حساب مجاني";
+    $("planLabel").textContent = "جارٍ تحميل الحساب...";
     $("accountButton").textContent = "تسجيل الخروج";
     $("topLogin").textContent = "حسابي";
+
+    await refreshSubscriptionInfo();
+
   } else {
     $("accountLabel").textContent = "زائر";
     $("planLabel").textContent = "حساب مجاني";
@@ -252,7 +319,341 @@ onAuthStateChanged(auth, user => {
 });
 
 // ==========================================
-// 9. اختيار الصور ومعاينتها
+// 10. نافذة الاشتراك الجديدة
+// ==========================================
+
+function prepareSubscriptionModal() {
+  const card = $("subscriptionModal").querySelector(".modal-card");
+
+  card.innerHTML = `
+    <button class="close-modal" id="closeSubscription">×</button>
+
+    <div class="modal-logo">TP+</div>
+
+    <h2>Tell Professor Plus</h2>
+
+    <div class="subscription-price">
+      49 جنيهًا <span>/ 30 يومًا</span>
+    </div>
+
+    <p>لقد استهلكت الصور المجانية الثلاث لهذا الحساب.</p>
+
+    <div id="subscriptionDetails">
+      <p>جارٍ تحميل بيانات الاشتراك...</p>
+    </div>
+
+    <div id="subscriptionFormArea"></div>
+
+    <div id="subscriptionStatus"></div>
+
+    <div id="adminArea"></div>
+
+    <button id="closeSubscriptionButton" type="button">
+      إغلاق
+    </button>
+  `;
+
+  $("closeSubscription").addEventListener("click", closeSubscription);
+  $("closeSubscriptionButton").addEventListener("click", closeSubscription);
+}
+
+function closeSubscription() {
+  $("subscriptionModal").classList.add("hidden");
+}
+
+prepareSubscriptionModal();
+
+// ==========================================
+// 11. فتح نافذة الاشتراك وتحميل البيانات
+// ==========================================
+
+async function openSubscription() {
+  if (!currentUser) {
+    showToast("سجّل الدخول أولًا.");
+    openAuth();
+    return;
+  }
+
+  $("subscriptionModal").classList.remove("hidden");
+
+  $("subscriptionDetails").textContent = "جارٍ تحميل بيانات الاشتراك...";
+  $("subscriptionFormArea").innerHTML = "";
+  $("subscriptionStatus").innerHTML = "";
+  $("adminArea").innerHTML = "";
+
+  try {
+    const idToken = await getToken();
+
+    const info = await apiRequest({
+      action: "subscriptionInfo",
+      idToken: idToken
+    });
+
+    subscriptionInfo = info;
+
+    $("subscriptionDetails").innerHTML = `
+      <div class="subscription-note">
+        <p><strong>طريقة الدفع:</strong> ${info.paymentMethod}</p>
+        <p><strong>رقم التحويل:</strong></p>
+        <p id="vodafoneNumber" dir="ltr"></p>
+        <p>حوّل 49 جنيهًا، ثم أدخل رقم العملية لإرسال طلب المراجعة.</p>
+      </div>
+    `;
+
+    $("vodafoneNumber").textContent = info.paymentNumber;
+
+    if (info.membership && info.membership.active) {
+      $("subscriptionStatus").textContent =
+        "اشتراكك نشط حتى: " +
+        new Date(info.membership.expiresAt).toLocaleDateString("ar-EG");
+
+      $("subscriptionFormArea").innerHTML = "";
+    } else {
+      showSubscriptionForm();
+    }
+
+    await loadMySubscriptionRequests();
+    await checkAdminAccess();
+
+  } catch (error) {
+    $("subscriptionDetails").textContent = error.message;
+  }
+}
+
+// ==========================================
+// 12. نموذج إرسال طلب الاشتراك
+// ==========================================
+
+function showSubscriptionForm() {
+  $("subscriptionFormArea").innerHTML = `
+    <form id="subscriptionRequestForm">
+      <label for="transactionRef">رقم عملية التحويل</label>
+
+      <input
+        id="transactionRef"
+        type="text"
+        maxlength="100"
+        minlength="4"
+        required
+        placeholder="اكتب رقم العملية"
+        style="width:100%;margin:10px 0;padding:12px;border-radius:10px;"
+      >
+
+      <button id="subscriptionSubmit" type="submit">
+        إرسال طلب الاشتراك
+      </button>
+    </form>
+  `;
+
+  $("subscriptionRequestForm").addEventListener("submit", submitSubscriptionRequest);
+}
+
+async function submitSubscriptionRequest(event) {
+  event.preventDefault();
+
+  const transactionRef = $("transactionRef").value.trim();
+  const button = $("subscriptionSubmit");
+
+  if (transactionRef.length < 4) {
+    showToast("اكتب رقم عملية صحيحًا.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "جارٍ إرسال الطلب...";
+
+  try {
+    const idToken = await getToken();
+
+    const result = await apiRequest({
+      action: "createSubscriptionRequest",
+      idToken: idToken,
+      transactionRef: transactionRef
+    });
+
+    $("subscriptionStatus").textContent =
+      "تم إرسال طلبك بنجاح. الطلب الآن قيد المراجعة.";
+
+    $("subscriptionFormArea").innerHTML = "";
+
+    showToast(result.message || "تم إرسال الطلب.");
+
+    await loadMySubscriptionRequests();
+
+  } catch (error) {
+    showToast(error.message);
+    button.disabled = false;
+    button.textContent = "إرسال طلب الاشتراك";
+  }
+}
+
+// ==========================================
+// 13. عرض طلبات المستخدم
+// ==========================================
+
+async function loadMySubscriptionRequests() {
+  if (!currentUser) return;
+
+  try {
+    const idToken = await getToken();
+
+    const result = await apiRequest({
+      action: "mySubscriptionRequests",
+      idToken: idToken
+    });
+
+    const area = $("subscriptionStatus");
+
+    if (!result.requests || result.requests.length === 0) {
+      return;
+    }
+
+    const labels = {
+      pending: "قيد المراجعة",
+      approved: "تمت الموافقة",
+      rejected: "مرفوض"
+    };
+
+    const list = document.createElement("div");
+
+    const heading = document.createElement("h3");
+    heading.textContent = "طلبات الاشتراك";
+    list.appendChild(heading);
+
+    result.requests.forEach(request => {
+      const item = document.createElement("p");
+
+      item.textContent =
+        "رقم العملية: " + request.transactionRef +
+        " — الحالة: " + (labels[request.status] || request.status);
+
+      list.appendChild(item);
+    });
+
+    area.appendChild(list);
+
+    if (result.membership && result.membership.active) {
+      $("planLabel").textContent = "Professor Plus";
+      $("subscriptionFormArea").innerHTML = "";
+    }
+
+  } catch (error) {
+    console.error("My subscription requests:", error);
+  }
+}
+
+// ==========================================
+// 14. لوحة الإدارة
+// ==========================================
+
+async function checkAdminAccess() {
+  if (!currentUser) return;
+
+  try {
+    const idToken = await getToken();
+
+    const result = await apiRequest({
+      action: "adminListRequests",
+      idToken: idToken
+    });
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "فتح لوحة إدارة الاشتراكات";
+
+    button.addEventListener("click", () => {
+      renderAdminRequests(result.requests || []);
+    });
+
+    $("adminArea").appendChild(button);
+
+  } catch (error) {
+    // المستخدم العادي لا يملك صلاحية الإدارة.
+  }
+}
+
+function renderAdminRequests(requests) {
+  const area = $("adminArea");
+  area.innerHTML = "";
+
+  const heading = document.createElement("h3");
+  heading.textContent = "لوحة إدارة الاشتراكات";
+  area.appendChild(heading);
+
+  if (!requests.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "لا توجد طلبات اشتراك.";
+    area.appendChild(empty);
+    return;
+  }
+
+  requests.forEach(request => {
+    const card = document.createElement("div");
+    card.style.padding = "12px";
+    card.style.margin = "10px 0";
+    card.style.border = "1px solid #555";
+    card.style.borderRadius = "10px";
+
+    const info = document.createElement("p");
+    info.textContent =
+      "البريد: " + request.email +
+      " | رقم العملية: " + request.transactionRef +
+      " | المبلغ: " + request.amount +
+      " | الحالة: " + request.status;
+
+    card.appendChild(info);
+
+    if (request.status === "pending") {
+      const approve = document.createElement("button");
+      approve.textContent = "موافقة وتفعيل الاشتراك";
+
+      approve.addEventListener("click", () => {
+        reviewSubscription(request.id, "adminApproveRequest");
+      });
+
+      const reject = document.createElement("button");
+      reject.textContent = "رفض الطلب";
+
+      reject.addEventListener("click", () => {
+        reviewSubscription(request.id, "adminRejectRequest");
+      });
+
+      card.appendChild(approve);
+      card.appendChild(reject);
+    }
+
+    area.appendChild(card);
+  });
+}
+
+async function reviewSubscription(requestId, action) {
+  try {
+    const idToken = await getToken();
+
+    const result = await apiRequest({
+      action: action,
+      idToken: idToken,
+      requestId: requestId
+    });
+
+    showToast(result.message || "تم تنفيذ الطلب.");
+
+    const refreshed = await apiRequest({
+      action: "adminListRequests",
+      idToken: idToken
+    });
+
+    renderAdminRequests(refreshed.requests || []);
+
+    await refreshSubscriptionInfo();
+
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+// ==========================================
+// 15. اختيار الصور ومعاينتها
 // ==========================================
 
 $("attachButton").addEventListener("click", () => {
@@ -276,7 +677,6 @@ imageInput.addEventListener("change", () => {
     return;
   }
 
-  // حد أقصى 2.8 ميجابايت لتقليل مشكلات حجم الطلب
   if (file.size > 2.8 * 1024 * 1024) {
     showToast("حجم الصورة كبير. الحد الأقصى 2.8 ميجابايت.");
     imageInput.value = "";
@@ -305,7 +705,7 @@ function removeSelectedImage() {
 $("removeImage").addEventListener("click", removeSelectedImage);
 
 // ==========================================
-// 10. تحويل الصورة إلى Base64
+// 16. تحويل الصورة إلى Base64
 // ==========================================
 
 function imageToBase64(file) {
@@ -330,7 +730,7 @@ function imageToBase64(file) {
 }
 
 // ==========================================
-// 11. عرض الرسائل
+// 17. عرض الرسائل
 // ==========================================
 
 function addMessage(text, sender) {
@@ -367,7 +767,7 @@ function addLoadingMessage() {
 }
 
 // ==========================================
-// 12. إرسال الطلب إلى Gemini
+// 18. إرسال الطلب إلى Gemini
 // ==========================================
 
 async function sendMessage() {
@@ -423,7 +823,7 @@ async function sendMessage() {
     };
 
     if (image) {
-      const idToken = await currentUser.getIdToken();
+      const idToken = await getToken();
 
       payload.idToken = idToken;
       payload.image = {
@@ -450,11 +850,12 @@ async function sendMessage() {
 
     if (!result.success) {
       if (result.code === "FREE_LIMIT_REACHED") {
-        $("subscriptionModal").classList.remove("hidden");
         addMessage(
-          "لقد استخدمت الصور المجانية الثلاث. يمكنك معرفة تفاصيل الاشتراك من نافذة Tell Professor Plus.",
+          "لقد استخدمت الصور المجانية الثلاث. افتح نافذة الاشتراك لمعرفة التفاصيل.",
           "assistant"
         );
+
+        await openSubscription();
         return;
       }
 
@@ -475,6 +876,10 @@ async function sendMessage() {
       );
     }
 
+    if (image && result.subscriptionActive) {
+      $("planLabel").textContent = "Professor Plus";
+    }
+
     if (image) {
       removeSelectedImage();
     }
@@ -488,6 +893,7 @@ async function sendMessage() {
     );
 
     console.error("Tell Professor AI error:", error);
+
   } finally {
     isSending = false;
     sendButton.disabled = false;
@@ -496,7 +902,7 @@ async function sendMessage() {
 }
 
 // ==========================================
-// 13. أزرار الإرسال
+// 19. أزرار الإرسال
 // ==========================================
 
 sendButton.addEventListener("click", sendMessage);
@@ -515,7 +921,7 @@ messageInput.addEventListener("input", () => {
 });
 
 // ==========================================
-// 14. الأسئلة السريعة
+// 20. الأسئلة السريعة
 // ==========================================
 
 document.querySelectorAll(".quick-prompts button").forEach(button => {
@@ -526,7 +932,7 @@ document.querySelectorAll(".quick-prompts button").forEach(button => {
 });
 
 // ==========================================
-// 15. محادثة جديدة
+// 21. محادثة جديدة
 // ==========================================
 
 $("newChat").addEventListener("click", () => {
@@ -539,7 +945,7 @@ $("newChat").addEventListener("click", () => {
 });
 
 // ==========================================
-// 16. الإملاء الصوتي
+// 22. الإملاء الصوتي
 // ==========================================
 
 $("micButton").addEventListener("click", () => {
@@ -563,6 +969,7 @@ $("micButton").addEventListener("click", () => {
 
   recognition.onresult = event => {
     const spokenText = event.results[0][0].transcript;
+
     messageInput.value +=
       (messageInput.value ? " " : "") + spokenText;
 
@@ -577,18 +984,16 @@ $("micButton").addEventListener("click", () => {
 });
 
 // ==========================================
-// 17. نافذة الاشتراك
+// 23. أزرار الاشتراك
 // ==========================================
 
-function closeSubscription() {
-  $("subscriptionModal").classList.add("hidden");
-}
-
-$("closeSubscription").addEventListener("click", closeSubscription);
 $("closeSubscriptionButton").addEventListener("click", closeSubscription);
 
+// فتح نافذة الاشتراك عند الضغط على زر الحساب إذا كان هناك اشتراك مطلوب
+// يمكن استدعاء openSubscription من أي زر آخر في الموقع.
+
 // ==========================================
-// 18. القائمة الجانبية للموبايل
+// 24. القائمة الجانبية للموبايل
 // ==========================================
 
 $("menuButton").addEventListener("click", () => {
@@ -610,7 +1015,7 @@ document.addEventListener("click", event => {
 });
 
 // ==========================================
-// 19. رسالة البداية
+// 25. رسالة البداية
 // ==========================================
 
 console.log("Tell Professor AI is ready.");
