@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090817">
+  <meta name="description" content="Tell Professor AI - مساعدك الذكي">
+  <title>Tell Professor AI</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-icon">TP</div>
+        <div>
+          <h2>Tell Professor</h2>
+          <span>AI ASSISTANT</span>
+        </div>
+      </div>
+
+      <button class="new-chat" id="newChat">＋ محادثة جديدة</button>
+
+      <p class="section-label">أدوات الذكاء الاصطناعي</p>
+
+      <nav class="tools">
+        <button class="tool active" data-tool="Chat">💬 <span>المحادثة</span></button>
+        <button class="tool" data-tool="Vision">👁️ <span>تحليل الصور</span></button>
+        <button class="tool" data-tool="Voice">🎙️ <span>الصوت</span></button>
+        <button class="tool" data-tool="Writer">✍️ <span>الكتابة</span></button>
+        <button class="tool" data-tool="Translate">🌐 <span>الترجمة</span></button>
+        <button class="tool" data-tool="Study">📚 <span>المذاكرة</span></button>
+        <button class="tool" data-tool="Summary">📝 <span>التلخيص</span></button>
+        <button class="tool" data-tool="Code">💻 <span>البرمجة</span></button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="account-info">
+          <div class="account-avatar">👤</div>
+          <div class="account-text">
+            <strong id="accountLabel">زائر</strong>
+            <span id="planLabel">حساب مجاني</span>
+          </div>
+        </div>
+        <button class="account-button" id="accountButton">تسجيل الدخول</button>
+      </div>
+    </aside>
+
+    <main class="main">
+
+      <header class="topbar">
+        <button class="menu-button" id="menuButton">☰</button>
+        <div class="top-title">
+          <strong>Tell Professor AI</strong>
+          <span>● ONLINE</span>
+        </div>
+        <button class="login-top" id="topLogin">حسابي</button>
+      </header>
+
+      <section class="chat-area" id="chatArea">
+
+        <div class="welcome" id="welcome">
+          <div class="welcome-logo">TP</div>
+          <h1>أهلاً بك في <span>Tell Professor AI</span></h1>
+          <p>مساعدك الذكي للدراسة والعمل والإبداع.</p>
+
+          <div class="quick-prompts">
+            <button data-prompt="اشرح لي درسًا بطريقة سهلة">📚 اشرح لي درسًا</button>
+            <button data-prompt="اكتب لي موضوع تعبير مميز">✍️ كتابة موضوع</button>
+            <button data-prompt="ترجم النص التالي">🌐 الترجمة</button>
+            <button data-prompt="ساعدني في كتابة كود برمجي">💻 مساعدة برمجية</button>
+          </div>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+      </section>
+
+      <div class="composer-area">
+
+        <div class="image-preview hidden" id="imagePreview">
+          <img id="previewImage" alt="معاينة الصورة">
+          <button id="removeImage" title="إزالة الصورة">×</button>
+        </div>
+
+        <div class="composer">
+          <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp" hidden>
+
+          <button class="attach-button" id="attachButton" title="إرفاق صورة">📎</button>
+
+          <button class="mic-button" id="micButton" title="الإملاء الصوتي">🎙️</button>
+
+          <textarea id="messageInput" rows="1"
+            placeholder="اسأل Professor AI أي حاجة..."></textarea>
+
+          <button class="send-button" id="sendButton">➤</button>
+        </div>
+
+        <p class="composer-note">
+          مدعوم بالذكاء الاصطناعي Gemini
+          <span>•</span>
+          لا تشارك معلوماتك السرية
+        </p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- نافذة الحساب -->
+  <div class="modal hidden" id="authModal">
+    <div class="modal-card">
+      <button class="close-modal" id="closeAuth">×</button>
+
+      <div class="modal-logo">TP</div>
+      <h2 id="authTitle">تسجيل الدخول</h2>
+      <p id="authDescription">ادخل إلى حسابك للاستفادة من تحليل الصور.</p>
+
+      <form id="authForm">
+        <label for="emailInput">البريد الإلكتروني</label>
+        <input type="email" id="emailInput" required placeholder="name@example.com">
+
+        <label for="passwordInput">كلمة المرور</label>
+        <input type="password" id="passwordInput" required minlength="6"
+          placeholder="6 أحرف على الأقل">
+
+        <button type="submit" id="authSubmit">دخول</button>
+      </form>
+
+      <button class="text-button" id="toggleAuth">إنشاء حساب جديد</button>
+      <button class="text-button" id="forgotPassword">نسيت كلمة المرور؟</button>
+
+      <p class="auth-message" id="authMessage"></p>
+    </div>
+  </div>
+
+  <!-- نافذة الاشتراك -->
+  <div class="modal hidden" id="subscriptionModal">
+    <div class="modal-card">
+      <button class="close-modal" id="closeSubscription">×</button>
+      <div class="modal-logo">TP+</div>
+      <h2>Tell Professor Plus</h2>
+      <div class="subscription-price">49 جنيهًا <span>/ 30 يومًا</span></div>
+      <p>لقد استهلكت الصور المجانية الثلاث لهذا الحساب.</p>
+      <p class="subscription-note">
+        الاشتراك متاح بعد تأكيد الدفع والموافقة على الطلب.
+        لا ترسل أي بيانات بنكية أو كلمات مرور هنا.
+      </p>
+      <button id="closeSubscriptionButton">حسنًا</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
