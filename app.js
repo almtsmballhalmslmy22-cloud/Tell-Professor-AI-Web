@@ -37,17 +37,23 @@ function showMessage(message) {
 }
 
 async function api(data) {
+async function api(data) {
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
     body: JSON.stringify(data)
   });
 
   const result = await response.json();
-  if (!result.success) throw new Error(result.error || "حدث خطأ.");
+
+  if (!result.success) {
+    throw new Error(result.error || "حدث خطأ في الاتصال.");
+  }
+
   return result;
 }
-
 async function getToken() {
   if (!currentUser) throw new Error("سجّل الدخول أولًا.");
   return await currentUser.getIdToken(true);
